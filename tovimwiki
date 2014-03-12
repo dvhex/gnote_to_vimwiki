@@ -1,0 +1,61 @@
+#!/usr/bin/perl -w
+foreach (@ARGV)
+{
+    open F, $_ or die;
+    @note = <F>;
+    close F;
+
+    $_ = join('', @note);
+    ($title) = m#<title>(.+)</title>#;
+    $title =~ s#/#_#g;
+    ($content) = m#<note-content.*?>((.|\s)+)</note-content>#;
+    ($tag) = m#<tag>.*:(.+)</tag>#;
+    #$tag =~ s#:#/#g;
+    $tag = "default" if !$tag;
+
+    # ссылки (локальные и внешние)
+    $content =~ s#<link:(url|internal)>(.*?)</link:(url|internal)>#[[$2]]#g;
+
+    # формат текста
+    $content =~ s#<italic>((.|\s)+?)</italic>#_$1_#g;
+    $content =~ s#<bold>((.|\s)+?)</bold>#*$1*#g;
+    $content =~ s#<monospace>((.|\s)+?)</monospace>#`$1`#g;
+    $content =~ s#<strikethrough>((.|\s)+?)</strikethrough>#~~$1~~#g;
+
+    # знаки
+    $content =~ s#&gt;#>#g;
+    $content =~ s#&lt;#<#g;
+    $content =~ s#&quot;#"#g;
+    $content =~ s#&amp;#&#g;
+
+    # размер шрифта конвертируется в код html, т.к. в vimwiki такой функции нету
+    $content =~ s#<size:(.+?)>((.|\s)+?)</size:\1>#<p style="text-size:$1">$2</p>#g;
+
+    # заменить переносы строк на двойные переносы
+    $content =~ s#\n{1,2}#\n\n#g;
+
+    # отметить первую строку, как заголовок
+    $content =~ s#^(.+?)\n#=$1=\n#;
+
+    #print "$content\n\n";
+    system("mkdir -p \"notes/$tag\"") && die;
+    open F, ">notes/$tag/$title.wiki" or die;
+    print F $content;
+    close F;
+    push @{$toc{$tag}}, $title;
+}
+# запись ссылок в виде индексных файлов
+open TOC, ">notes/index.wiki";
+print TOC "=Блокноты=\n\n";
+foreach (keys %toc)
+{
+    print TOC "* [[$_/index.wiki]]\n";
+    open INDEX, ">notes/$tag/index.wiki" or die;
+    print INDEX "=$_=\n\n";
+    foreach ( @{$toc{$_}})
+    {
+        print INDEX "* [[$_]]\n";
+    }
+    close INDEX;
+}
+close TOC;
