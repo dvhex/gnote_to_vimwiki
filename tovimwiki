@@ -14,7 +14,8 @@ foreach (@ARGV)
     $tag = "default" if !$tag;
 
     # ссылки (локальные и внешние)
-    $content =~ s#<link:(url|internal)>(.*?)</link:(url|internal)>#[[$2]]#g;
+    $content =~ s#<link:internal>(.*?)</link:internal>#[[$1]]#g;
+    $content =~ s#<link:url>(.*?)</link:url)>#$1#g;
 
     # формат текста
     $content =~ s#<italic>((.|\s)+?)</italic>#_$1_#g;
@@ -49,8 +50,8 @@ open TOC, ">notes/index.wiki";
 print TOC "=Блокноты=\n\n";
 foreach (keys %toc)
 {
-    print TOC "* [[$_/index.wiki]]\n";
-    open INDEX, ">notes/$tag/index.wiki" or die;
+    print TOC "* [[$_/index|$_]]\n";
+    open INDEX, ">notes/$_/index.wiki" or die;
     print INDEX "=$_=\n\n";
     foreach ( @{$toc{$_}})
     {
