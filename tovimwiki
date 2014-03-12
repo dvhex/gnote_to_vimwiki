@@ -1,62 +1,109 @@
 #!/usr/bin/perl -w
 foreach (@ARGV)
 {
-    open F, $_ or die;
-    @note = <F>;
+    $_ = read_note($_);
+    $title = get_title($_);
+    $content = get_content($_);
+    $tag = get_tag($_);
+
+    $content = gnote_to_vimwiki($content);
+
+    create_wiki_note($tag, $title, $content);
+
+    push @{$toc{$tag}}, $title;
+}
+create_toc_files(\%toc);
+
+sub create_toc_files
+{
+    # запись ссылок в виде индексных файлов
+    my %toc = %{$_[0]};
+    open TOC, ">notes/index.wiki";
+    print TOC "=Блокноты=\n\n";
+    foreach (keys %toc)
+    {
+        print TOC "* [[$_/index|$_]]\n";
+        open INDEX, ">notes/$_/index.wiki" or die;
+        print INDEX "=$_=\n\n";
+        foreach ( @{$toc{$_}})
+        {
+            print INDEX "* [[$_]]\n";
+        }
+        close INDEX;
+    }
+    close TOC;
+}
+
+sub read_note
+{
+    my $fname = shift;
+    open F, $fname or die;
+    my @note = <F>;
     close F;
 
-    $_ = join('', @note);
-    ($title) = m#<title>(.+)</title>#;
+    join('', @note);
+}
+
+sub get_title
+{
+    $_ = shift;
+    my ($title) = m#<title>(.+)</title>#;
     $title =~ s#/#_#g;
-    ($content) = m#<note-content.*?>((.|\s)+)</note-content>#;
-    ($tag) = m#<tag>.*:(.+)</tag>#;
-    #$tag =~ s#:#/#g;
+    return $title;
+}
+
+sub get_content
+{
+    $_ = shift;
+    my ($content) = m#<note-content.*?>((.|\s)+)</note-content>#;
+    return $content;
+}
+
+sub get_tag
+{
+    $_ = shift;
+    my ($tag) = m#<tag>.*:(.+)</tag>#;
     $tag = "default" if !$tag;
+    return $tag;
+}
+
+sub gnote_to_vimwiki
+{
+    $_ = shift;
 
     # ссылки (локальные и внешние)
-    $content =~ s#<link:internal>(.*?)</link:internal>#[[$1]]#g;
-    $content =~ s#<link:url>(.*?)</link:url)>#$1#g;
+    s#<link:internal>(.*?)</link:internal>#[[$1]]#g;
+    s#<link:url>(.*?)</link:url>#$1#g;
 
     # формат текста
-    $content =~ s#<italic>((.|\s)+?)</italic>#_$1_#g;
-    $content =~ s#<bold>((.|\s)+?)</bold>#*$1*#g;
-    $content =~ s#<monospace>((.|\s)+?)</monospace>#`$1`#g;
-    $content =~ s#<strikethrough>((.|\s)+?)</strikethrough>#~~$1~~#g;
+    s#<italic>((.|\s)+?)</italic>#_$1_#g;
+    s#<bold>((.|\s)+?)</bold>#*$1*#g;
+    s#<monospace>((.|\s)+?)</monospace>#`$1`#g;
+    s#<strikethrough>((.|\s)+?)</strikethrough>#~~$1~~#g;
 
     # знаки
-    $content =~ s#&gt;#>#g;
-    $content =~ s#&lt;#<#g;
-    $content =~ s#&quot;#"#g;
-    $content =~ s#&amp;#&#g;
+    s#&gt;#>#g;
+    s#&lt;#<#g;
+    s#&quot;#"#g;
+    s#&amp;#&#g;
 
     # размер шрифта конвертируется в код html, т.к. в vimwiki такой функции нету
-    $content =~ s#<size:(.+?)>((.|\s)+?)</size:\1>#<p style="text-size:$1">$2</p>#g;
+    s#<size:(.+?)>((.|\s)+?)</size:\1>#<p style="text-size:$1">$2</p>#g;
 
     # заменить переносы строк на двойные переносы
-    $content =~ s#\n{1,2}#\n\n#g;
+    s#\n{1,2}#\n\n#g;
 
     # отметить первую строку, как заголовок
-    $content =~ s#^(.+?)\n#=$1=\n#;
+    s#^(.+?)\n#=$1=\n#;
 
-    #print "$content\n\n";
+    return $_;
+}
+
+sub create_wiki_note
+{
+    my ($tag, $title, $content) = @_;
     system("mkdir -p \"notes/$tag\"") && die;
     open F, ">notes/$tag/$title.wiki" or die;
     print F $content;
     close F;
-    push @{$toc{$tag}}, $title;
 }
-# запись ссылок в виде индексных файлов
-open TOC, ">notes/index.wiki";
-print TOC "=Блокноты=\n\n";
-foreach (keys %toc)
-{
-    print TOC "* [[$_/index|$_]]\n";
-    open INDEX, ">notes/$_/index.wiki" or die;
-    print INDEX "=$_=\n\n";
-    foreach ( @{$toc{$_}})
-    {
-        print INDEX "* [[$_]]\n";
-    }
-    close INDEX;
-}
-close TOC;
