@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+$linewidth = 80;
 foreach (@ARGV)
 {
     $_ = read_note($_);
@@ -19,11 +20,13 @@ sub create_toc_files
     # запись ссылок в виде индексных файлов
     my %toc = %{$_[0]};
     open TOC, ">notes/index.wiki";
+    binmode(TOC, "utf8");
     print TOC "=Блокноты=\n\n";
     foreach (keys %toc)
     {
         print TOC "* [[$_/index|$_]]\n";
         open INDEX, ">notes/$_/index.wiki" or die;
+        binmode(INDEX, "utf8");
         print INDEX "=$_=\n\n";
         foreach ( @{$toc{$_}})
         {
@@ -38,6 +41,7 @@ sub read_note
 {
     my $fname = shift;
     open F, $fname or die;
+    binmode(F, "utf8");
     my @note = <F>;
     close F;
 
@@ -90,11 +94,11 @@ sub gnote_to_vimwiki
     # размер шрифта конвертируется в код html, т.к. в vimwiki такой функции нету
     s#<size:(.+?)>((.|\s)+?)</size:\1>#<p style="text-size:$1">$2</p>#g;
 
-    # поиск блоков кода и вставка двойных переносов
-    $_ = process_code_blocks($_);
-
     # отметить первую строку, как заголовок
     s#^(.+?)\n#=$1=\n#;
+
+    # поиск блоков кода и вставка двойных переносов
+    $_ = process_code_blocks($_);
 
     return $_;
 }
@@ -115,6 +119,7 @@ sub process_code_blocks
             }
             elsif ($_ ne "")
             {
+                $_ = split_line($_) unless /^=.+=$/;
                 $_ .= "\n\n";
             }
         }
@@ -135,11 +140,46 @@ sub process_code_blocks
     return $_;
 }
 
+sub split_line
+{
+    my $line = shift;
+    if (length($line) > $linewidth)
+    {
+        my @words = split(" ", $line);
+        $line = "";
+        my $curline = "";
+        foreach (@words)
+        {
+            unless ($curline)
+            {
+                $curline = $_;
+                next;
+            }
+            if (length($curline." ".$_) < 80)
+            {
+                $curline .= " ".$_;
+            }
+            else
+            {
+                $line .= $curline."\n";
+                $curline = "";
+                redo;
+            }
+        }
+        if ($curline)
+        {
+            $line .= $curline;
+        }
+    }
+    return $line;
+}
+
 sub create_wiki_note
 {
     my ($tag, $title, $content) = @_;
     system("mkdir -p \"notes/$tag\"") && die;
     open F, ">notes/$tag/$title.wiki" or die;
+    binmode(F, "utf8");
     print F $content;
     close F;
 }
