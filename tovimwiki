@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 $linewidth = 80;
+$globaltitle = "Notebooks";
 foreach (@ARGV)
 {
     $_ = read_note($_);
@@ -21,7 +22,7 @@ sub create_toc_files
     my %toc = %{$_[0]};
     open TOC, ">notes/index.wiki";
     binmode(TOC, "utf8");
-    print TOC "=Блокноты=\n\n";
+    print TOC "=".$globaltitle."=\n\n";
     foreach (keys %toc)
     {
         print TOC "* [[$_/index|$_]]\n";
