@@ -16,28 +16,6 @@ foreach (@ARGV)
 }
 create_toc_files(\%toc);
 
-sub create_toc_files
-{
-    # запись ссылок в виде индексных файлов
-    my %toc = %{$_[0]};
-    open TOC, ">notes/index.wiki";
-    binmode(TOC, "utf8");
-    print TOC "=".$globaltitle."=\n\n";
-    foreach (keys %toc)
-    {
-        print TOC "* [[$_/index|$_]]\n";
-        open INDEX, ">notes/$_/index.wiki" or die;
-        binmode(INDEX, "utf8");
-        print INDEX "=$_=\n\n";
-        foreach ( @{$toc{$_}})
-        {
-            print INDEX "* [[$_]]\n";
-        }
-        close INDEX;
-    }
-    close TOC;
-}
-
 sub read_note
 {
     my $fname = shift;
@@ -184,3 +162,26 @@ sub create_wiki_note
     print F $content;
     close F;
 }
+
+sub create_toc_files
+{
+    # запись ссылок в виде индексных файлов
+    my %toc = %{$_[0]};
+    open TOC, ">notes/index.wiki";
+    binmode(TOC, "utf8");
+    print TOC "=".$globaltitle."=\n\n";
+    foreach (sort keys %toc)
+    {
+        print TOC "* [[$_/index|$_]]\n";
+        open INDEX, ">notes/$_/index.wiki" or die;
+        binmode(INDEX, "utf8");
+        print INDEX "=$_=\n\n";
+        foreach (sort @{$toc{$_}})
+        {
+            print INDEX "* [[$_]]\n";
+        }
+        close INDEX;
+    }
+    close TOC;
+}
+
