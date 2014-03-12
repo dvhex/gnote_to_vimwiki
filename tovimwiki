@@ -78,7 +78,7 @@ sub gnote_to_vimwiki
     # формат текста
     s#<italic>((.|\s)+?)</italic>#_$1_#g;
     s#<bold>((.|\s)+?)</bold>#*$1*#g;
-    s#<monospace>((.|\s)+?)</monospace>#`$1`#g;
+    s#<monospace>(.+?)</monospace>#`$1`#g;
     s#<strikethrough>((.|\s)+?)</strikethrough>#~~$1~~#g;
 
     # знаки
@@ -90,12 +90,48 @@ sub gnote_to_vimwiki
     # размер шрифта конвертируется в код html, т.к. в vimwiki такой функции нету
     s#<size:(.+?)>((.|\s)+?)</size:\1>#<p style="text-size:$1">$2</p>#g;
 
-    # заменить переносы строк на двойные переносы
-    s#\n{1,2}#\n\n#g;
+    # поиск блоков кода и вставка двойных переносов
+    $_ = process_code_blocks($_);
 
     # отметить первую строку, как заголовок
     s#^(.+?)\n#=$1=\n#;
 
+    return $_;
+}
+
+sub process_code_blocks
+{
+    $_ = shift;
+    my @lines = split("\n", $_);
+    my $in_cb = 0;
+    foreach (@lines)
+    {
+        unless ($in_cb)
+        {
+            if (/^<monospace>/)
+            {
+                $in_cb = 1;
+                s/<monospace>/{{{\n/;
+            }
+            elsif ($_ ne "")
+            {
+                $_ .= "\n\n";
+            }
+        }
+        else
+        {
+            if (m#</monospace>#)
+            {
+                $in_cb = 0;
+                s#</monospace>#\n}}}\n\n#;
+            }
+            else
+            {
+                $_ .= "\n";
+            }
+        }
+    }
+    $_ = join("", @lines);
     return $_;
 }
 
