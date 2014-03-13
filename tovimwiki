@@ -1,7 +1,8 @@
 #!/usr/bin/perl -w
 $linewidth = 80;
 $globaltitle = "Notebooks";
-foreach (@ARGV)
+$path = get_work_path();
+foreach (glob("$path/*.note"))
 {
     $note = read_note($_);
     $title = get_title($note);
@@ -16,6 +17,21 @@ foreach (@ARGV)
     push @{$toc{$tag}}, $title;
 }
 create_toc_files(\%toc);
+
+sub get_work_path
+{
+    my $path;
+    if (@_)
+    {
+        $path = shift;
+        $path =~ s#/+$##;
+    }
+    else
+    {
+        $path = "~/.local/share/gnote";
+    }
+    return $path;
+}
 
 sub read_note
 {
