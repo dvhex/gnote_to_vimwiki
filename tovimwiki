@@ -3,10 +3,10 @@ $linewidth = 80;
 $globaltitle = "Notebooks";
 foreach (@ARGV)
 {
-    $_ = read_note($_);
-    $title = get_title($_);
-    $content = get_content($_);
-    $tag = get_tag($_);
+    $note = read_note($_);
+    $title = get_title($note);
+    $content = get_content($note);
+    $tag = get_tag($note);
 
     $content = gnote_to_vimwiki($content);
 
@@ -30,9 +30,15 @@ sub read_note
 sub get_title
 {
     $_ = shift;
-    my ($title) = m#<title>(.+)</title>#;
-    $title =~ s#/#_#g;
-    return $title;
+    m#<title>(.+)</title>#;
+    $_ = $1;
+    s#[/:]#_#g;
+    # знаки
+    s#&gt;#>#g;
+    s#&lt;#<#g;
+    s#&quot;#"#g;
+    s#&amp;#&#g;
+    return $_;
 }
 
 sub get_content
